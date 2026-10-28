@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pul Hisobi — Shaxsiy Moliya Boshqaruvi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0284c7', 600: '#0369a1', 700: '#075985', 900: '#0c4a6e' },
+                        income: '#10b981',
+                        expense: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0284c7">
+    <style>
+        .tab-content { animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans min-h-screen pb-20 md:pb-6 transition-colors duration-200">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary-600 text-white flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Pul Hisobi</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400" id="headerSyncStatus">Lokal saqlash</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleIncognito()" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" title="Yashirin rejim">
+                    <i id="incognitoIcon" class="fa-solid fa-eye"></i>
+                </button>
+                <button onclick="toggleTheme()" class="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" title="Rejimni o'zgartirish">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="max-w-5xl mx-auto px-4 py-6">
+        <!-- DASHBOARD TAB -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <div class="bg-gradient-to-r from-primary-700 to-primary-900 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
+                <div class="relative z-10">
+                    <span class="text-xs uppercase tracking-wider text-primary-200 font-semibold">Umumiy Balans</span>
+                    <h2 class="text-3xl md:text-4xl font-extrabold mt-1 mb-4" id="totalBalance">0 UZS</h2>
+                    
+                    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-primary-600/50">
+                        <div>
+                            <div class="flex items-center gap-2 text-xs text-primary-200">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Jami Kirim
+                            </div>
+                            <p class="text-lg font-bold text-emerald-300 mt-0.5" id="totalIncome">0 UZS</p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 text-xs text-primary-200">
+                                <span class="w-2 h-2 rounded-full bg-rose-400"></span> Jami Chiqim
+                            </div>
+                            <p class="text-lg font-bold text-rose-300 mt-0.5" id="totalExpense">0 UZS</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="openTransactionModal('income')" class="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-2xl shadow transition">
+                    <i class="fa-solid fa-plus-circle"></i> Kirim qo'shish
+                </button>
+                <button onclick="openTransactionModal('expense')" class="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 px-4 rounded-2xl shadow transition">
+                    <i class="fa-solid fa-minus-circle"></i> Chiqim qo'shish
+                </button>
+            </div>
+
+            <div>
+                <h3 class="font-bold text-lg mb-3">Hamyonlar</h3>
+                <div id="walletsList" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 class="font-bold text-lg mb-4">Oylik nisbat</h3>
+                <div class="h-56">
+                    <canvas id="dashboardChart"></canvas>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-lg">Oxirgi amallar</h3>
+                    <button onclick="switchTab('history')" class="text-sm text-primary-600 hover:underline font-semibold">Barchasini ko'rish</button>
+                </div>
+                <div id="recentTransactions" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- HISTORY TAB -->
+        <section id="tab-history" class="tab-content space-y-4 hidden">
+            <h2 class="text-2xl font-bold">Amallar Tarixi</h2>
+            <div id="historyList" class="space-y-2"></div>
+        </section>
+
+        <!-- STATISTICS TAB -->
+        <section id="tab-stats" class="tab-content space-y-6 hidden">
+            <h2 class="text-2xl font-bold">Tahlil va Statistika</h2>
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="h-64">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- SETTINGS TAB -->
+        <section id="tab-settings" class="tab-content space-y-6 hidden">
+            <h2 class="text-2xl font-bold">Sozlamalar</h2>
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-primary-600"></i> Kategoriya qo'shish
+                </h3>
+                <div class="flex gap-2">
+                    <select id="newCatType" class="p-2 border rounded-xl dark:bg-slate-700">
+                        <option value="expense">Chiqim</option>
+                        <option value="income">Kirim</option>
+                    </select>
+                    <input type="text" id="newCatName" placeholder="Kategoriya nomi" class="flex-1 p-2 border rounded-xl dark:bg-slate-700">
+                    <button onclick="addNewCategory()" class="bg-primary-600 text-white px-4 py-2 rounded-xl font-semibold">Qo'shish</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal -->
+    <div id="transactionModal" class="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-t-3xl md:rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 id="modalTitle" class="text-xl font-bold">Yangi Amal</h3>
+                <button onclick="closeTransactionModal()" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+            <form id="transactionForm" onsubmit="saveTransaction(event)" class="space-y-3">
+                <input type="hidden" id="txType" value="income">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Summa (UZS)</label>
+                    <input type="number" id="txAmount" required min="1" placeholder="0" class="w-full p-3 border rounded-xl font-bold dark:bg-slate-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Kategoriya</label>
+                    <select id="txCategory" required class="w-full p-2.5 border rounded-xl dark:bg-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Hamyon</label>
+                    <select id="txWallet" required class="w-full p-2.5 border rounded-xl dark:bg-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Sana</label>
+                    <input type="date" id="txDate" required class="w-full p-2.5 border rounded-xl dark:bg-slate-700">
+                </div>
+                <button type="submit" class="w-full bg-primary-600 text-white font-semibold py-3 rounded-xl">Saqlash</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 z-40 md:max-w-5xl md:mx-auto">
+        <div class="flex justify-around items-center h-16 px-2">
+            <button onclick="switchTab('dashboard')" class="nav-btn flex flex-col items-center text-primary-600" data-tab="dashboard">
+                <i class="fa-solid fa-house"></i><span class="text-[10px]">Bosh sahifa</span>
+            </button>
+            <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center text-slate-400" data-tab="history">
+                <i class="fa-solid fa-receipt"></i><span class="text-[10px]">Tarix</span>
+            </button>
+            <button onclick="openTransactionModal('expense')" class="w-12 h-12 rounded-full bg-primary-600 text-white flex items-center justify-center text-xl shadow-lg transform -translate-y-3">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+            <button onclick="switchTab('stats')" class="nav-btn flex flex-col items-center text-slate-400" data-tab="stats">
+                <i class="fa-solid fa-chart-pie"></i><span class="text-[10px]">Statistika</span>
+            </button>
+            <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center text-slate-400" data-tab="settings">
+                <i class="fa-solid fa-gear"></i><span class="text-[10px]">Sozlamalar</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        let state = {
+            transactions: [],
+            wallets: [{ id: 'w1', name: 'Naqd pul', balance: 0 }, { id: 'w2', name: 'Uzcard/Humo', balance: 0 }],
+            categories: {
+                income: ['Maosh', 'Biznes', 'Qo'shimcha daromad', 'Sovg'a', 'Boshqa'],
+                expense: ['Oziq-ovqat', 'Transport', 'Uy-joy', 'Kiyim-kechak', 'Sog'liq', 'Ta'lim', 'Ko'ngilochar', 'Biznes', 'Boshqa']
+            },
+            settings: { incognito: false, theme: 'light' }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('pul_hisobi_data');
+            if (saved) state = JSON.parse(saved);
+            document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+            renderAll();
+        });
+
+        function saveState() {
+            localStorage.setItem('pul_hisobi_data', JSON.stringify(state));
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        }
+
+        function openTransactionModal(type = 'income') {
+            document.getElementById('txType').value = type;
+            document.getElementById('txCategory').innerHTML = state.categories[type].map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('txWallet').innerHTML = state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+            document.getElementById('transactionModal').classList.remove('hidden');
+        }
+
+        function closeTransactionModal() {
+            document.getElementById('transactionModal').classList.add('hidden');
+        }
+
+        function saveTransaction(e) {
+            e.preventDefault();
+            const tx = {
+                id: 'tx_' + Date.now(),
+                type: document.getElementById('txType').value,
+                amount: parseFloat(document.getElementById('txAmount').value),
+                category: document.getElementById('txCategory').value,
+                walletId: document.getElementById('txWallet').value,
+                date: document.getElementById('txDate').value
+            };
+            state.transactions.unshift(tx);
+            saveState();
+            renderAll();
+            closeTransactionModal();
+        }
+
+        function renderAll() {
+            let income = 0, expense = 0;
+            state.transactions.forEach(t => {
+                if (t.type === 'income') income += t.amount;
+                else expense += t.amount;
+            });
+            document.getElementById('totalBalance').innerText = (income - expense).toLocaleString() + ' UZS';
+            document.getElementById('totalIncome').innerText = income.toLocaleString() + ' UZS';
+            document.getElementById('totalExpense').innerText = expense.toLocaleString() + ' UZS';
+
+            document.getElementById('walletsList').innerHTML = state.wallets.map(w => `
+                <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <span class="text-xs text-slate-500">${w.name}</span>
+                    <p class="font-bold text-sm mt-1">${w.balance.toLocaleString()} UZS</p>
+                </div>
+            `).join('');
+        }
+
+        function addNewCategory() {
+            const name = document.getElementById('newCatName').value.trim();
+            const type = document.getElementById('newCatType').value;
+            if (name && !state.categories[type].includes(name)) {
+                state.categories[type].push(name);
+                saveState();
+                document.getElementById('newCatName').value = '';
+                alert('Kategoriya qo'shildi!');
+            }
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        function toggleIncognito() {
+            state.settings.incognito = !state.settings.incognito;
+            renderAll();
+        }
+    </script>
+</body>
+</html>
